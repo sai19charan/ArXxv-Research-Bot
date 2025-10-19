@@ -66,26 +66,6 @@ def get_gemini_model():
     return model
 
 @st.cache_resource
-def get_title_lookup():
-    """
-    Loads the arXiv dataset and creates a dictionary mapping paper ID to title.
-    This is cached so it only runs once per session.
-    """
-    print("Loading arXiv dataset for title lookup...")
-    try:
-        # Load only the necessary columns to save memory
-        df = pd.read_csv(DATA_FILE, usecols=['id', 'title'])
-        df.dropna(inplace=True)
-        # Create a dictionary for fast lookups: { 'id': 'title' }
-        title_lookup = df.set_index('id')['title'].to_dict()
-        print("Title lookup dictionary created.")
-        return title_lookup
-    except FileNotFoundError:
-        st.error(f"Dataset file not found at {DATA_FILE}. Cannot perform title lookups.")
-        return {}
-    except Exception as e:
-        st.error(f"Error loading title data: {e}")
-        return {}
 
 def perform_search(query):
     """
@@ -110,17 +90,19 @@ def perform_search(query):
         for i, match in enumerate(search_results['matches']):
             paper_id = match['id']
             summary = match['metadata']['summary']
+            title = match['metadata'].get('title', 'Title Not Found')
             score = match['score']
             link = get_arxiv_link(paper_id)
-            
+
             result_item = {
                 "id": paper_id,
                 "summary": summary,
+                "title": title,
                 "score": f"{score:.4f}",
                 "link": link
             }
             formatted_results.append(result_item)
-            
+
     return formatted_results
 
 def create_augmented_prompt(query, search_results):
@@ -163,8 +145,7 @@ def search_and_generate(query):
     """
     model = get_embedding_model()
     index = get_pinecone_index()
-    title_lookup = get_title_lookup()
-    
+
     # 1. Retrieval
     query_embedding = model.encode(query).tolist()
     pinecone_results = index.query(
@@ -172,26 +153,25 @@ def search_and_generate(query):
         top_k=15,
         include_metadata=True
     )
-    
+
     # Formatting Pinecone results for display
     formatted_results = []
     if pinecone_results['matches']:
         for match in pinecone_results['matches']:
             paper_id = match['id']
-            # Safely get the title from our lookup dictionary
-            title = title_lookup.get(paper_id, 'Title Not Found in Dataset')
-            
+            title = match['metadata'].get('title', 'Title Not Found')
+
             formatted_results.append({
                 "id": paper_id,
                 "summary": match['metadata']['summary'],
-                "title": title, 
+                "title": title,
                 "score": f"{match['score']:.4f}",
                 "link": get_arxiv_link(paper_id)
             })
 
     # 2. Augmentation & Generation
     generated_answer = generate_answer(query, formatted_results)
-    
+
     return {
         "pinecone_results": formatted_results,
         "generated_answer": generated_answer

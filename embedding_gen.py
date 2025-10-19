@@ -109,8 +109,11 @@ for i in tqdm(range(0, 50000, BATCH_SIZE)):
     vectors_to_upsert = []
     for j, row in batch_df.iterrows():
         paper_id = str(row['id'])
-        vector = embeddings[j - i] 
-        metadata = {'summary': row['summary']}
+        vector = embeddings[j - i]
+        metadata = {
+            'summary': row['summary'],
+            'title': row['title']
+        }
         vectors_to_upsert.append((paper_id, vector, metadata))
     
     # Upserting the batch to Pinecone
