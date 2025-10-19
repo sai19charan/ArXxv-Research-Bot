@@ -100,7 +100,7 @@ def perform_search(query):
     # Query Pinecone to find the top 5 most similar papers
     search_results = index.query(
         vector=query_embedding,
-        top_k=5,
+        top_k=15,
         include_metadata=True
     )
     
@@ -169,7 +169,7 @@ def search_and_generate(query):
     query_embedding = model.encode(query).tolist()
     pinecone_results = index.query(
         vector=query_embedding,
-        top_k=5,
+        top_k=15,
         include_metadata=True
     )
     
