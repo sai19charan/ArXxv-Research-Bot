@@ -219,3 +219,16 @@ with st.sidebar:
                 st.session_state.chat_state['step'] = 'show_summaries'
                 st.rerun()
 
+
+# .\venv\Scripts\activate
+# streamlit run ui.py
+# What is the difference between BERT and Transformer models?
+# What are the main applications of reinforcement learning ?
+# How do Graph Neural Networks handle node classification tasks?
+# Computers that can understand human language and text.
+# Different kinds of neural networks?
+
+
+# embedding model?
+# text preprocessing
+# pinecone?
