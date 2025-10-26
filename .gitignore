@@ -1,6 +1,5 @@
 .env
 venv/
-proj_venv/
 arXiv_scientific dataset.csv
 __pycache__/
 *.pyc

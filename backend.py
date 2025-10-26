@@ -2,8 +2,7 @@ import streamlit as st
 from pinecone import Pinecone
 import re
 from sentence_transformers import SentenceTransformer
-import google.genai as genai 
-from google.genai import Client # <-- New explicit import for clarity
+import google.generativeai as genai
 import os 
 from dotenv import load_dotenv 
 import pandas as pd 
@@ -58,16 +57,13 @@ def get_pinecone_index():
     return index
 
 @st.cache_resource
-def get_gemini_model_client(): # <-- Renamed function for clarity
-    """Initializes and caches the Gemini Client connection."""
-    print("Initializing Gemini Client...")
-    
-    # **FIX:** Replace genai.configure() with client instantiation
-    # The client will handle the connection logic
-    client = Client(api_key=GEMINI_API_KEY) 
-
-    print("Gemini Client ready.")
-    return client
+def get_gemini_model():
+    """Initializes and caches the Gemini model."""
+    print("Initializing Gemini model...")
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel('gemini-2.5-flash-preview-05-20')
+    print("Gemini model ready.")
+    return model
 
 @st.cache_resource
 def get_title_lookup():
@@ -94,7 +90,6 @@ def get_title_lookup():
 def perform_search(query):
     """
     Takes a user query, embeds it, and performs a search in Pinecone.
-    (This function is currently unused in your main RAG pipeline but kept for integrity.)
     """
     model = get_embedding_model()
     index = get_pinecone_index()
@@ -149,16 +144,11 @@ def generate_answer(query, search_results):
     if not search_results:
         return "No relevant papers were found to answer your question."
         
-    # Get the Gemini Client object
-    llm_client = get_gemini_model_client()
+    llm = get_gemini_model()
     prompt = create_augmented_prompt(query, search_results)
     
     try:
-        # **FIX:** Call generate_content on the client object and pass the model name
-        response = llm_client.models.generate_content(
-            model='gemini-2.5-flash', # Use a stable model name
-            contents=prompt
-        )
+        response = llm.generate_content(prompt)
         return response.text
     except Exception as e:
         print(f"Error during Gemini API call: {e}")
@@ -207,166 +197,4 @@ def search_and_generate(query):
         "generated_answer": generated_answer
     }
 
-
-
-# ================================================
-# SPELL / GRAMMAR CORRECTION USING GEMINI LLM
-# ================================================
-# def correct_query_with_llm(user_query: str) -> str:
-#     """
-#     Uses Gemini to correct spelling and grammar in the user's query.
-#     Keeps domain-specific terms (e.g., ML, AI, arXiv) unchanged.
-#     """
-#     if not user_query or not user_query.strip():
-#         return user_query
-
-#     try:
-#         # Get Gemini client (cached)
-#         llm_client = get_gemini_model_client()
-
-#         # Construct a prompt to preserve technical terms
-#         prompt = f"""
-#         You are a precise academic writing assistant.
-#         Correct any spelling or grammatical errors in the following query
-#         while preserving domain-specific and technical words such as
-#         machine learning terms, model names, or dataset names.
-        
-#         After correction, convert query to a concise and clear form which is suitable for a research paper search engine that uses scientific text embeddings.
-
-#         Return only the corrected and final query, no explanations.
-
-#         Query: "{user_query}"
-#         """
-
-#         # Call Gemini
-#         response = llm_client.models.generate_content(
-#             model='gemini-2.5-flash',
-#             contents=prompt
-#         )
-
-#         # Extract corrected text safely
-#         corrected_query = response.text.strip() if hasattr(response, 'text') else user_query
-
-#         # Handle empty or invalid responses
-#         if not corrected_query:
-#             corrected_query = user_query
-
-#         print(f"[Spell Check] Original: {user_query} --> Corrected: {corrected_query}")
-#         return corrected_query
-
-#     except Exception as e:
-#         print(f"Spell correction error: {e}")
-#         return user_query
-
-
-# ================================================
-# ADVANCED QUERY PREPROCESSING PIPELINE
-# ================================================
-import re
-
-def basic_clean(text: str) -> str:
-    """
-    Performs minimal text cleaning for embedding stability.
-    - Lowercases
-    - Removes URLs and unwanted characters
-    - Normalizes whitespace
-    """
-    if not text:
-        return text
-    text = text.lower().strip()
-    text = re.sub(r"http\S+", "", text)                # remove URLs
-    text = re.sub(r"[_\-]+", " ", text)               # replace _ or - with space
-    text = re.sub(r"[^a-z0-9\s\+\#\.\,\%\(\)]", "", text)  # keep useful symbols
-    text = re.sub(r"\s+", " ", text)                  # normalize spaces
-    return text
-
-
-def expand_query_with_llm(user_query: str) -> list:
-    """
-    Optionally uses Gemini to expand a query with related terms or paraphrases.
-    Returns a list of variations including the original query.
-    """
-    if not user_query.strip():
-        return [user_query]
-    try:
-        llm_client = get_gemini_model_client()
-        prompt = f"""
-        Generate 3 concise paraphrases or related variations of this scientific query,
-        preserving technical meaning and domain-specific terms.
-        Return them as a simple numbered list, no explanations.
-
-        Query: "{user_query}"
-        """
-        response = llm_client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt
-        )
-        raw_text = response.text.strip() if hasattr(response, 'text') else user_query
-        # Extract each line as a variation
-        variations = [line.strip("- ").strip() for line in raw_text.split("\n") if line.strip()]
-        # Always include the original query at index 0
-        return [user_query] + variations[:3]
-    except Exception as e:
-        print(f"Query expansion error: {e}")
-        return [user_query]
-
-
-def correct_query_with_llm(user_query: str) -> str:
-    """
-    Uses Gemini to correct spelling and grammar in the user's query.
-    Keeps domain-specific terms and optimizes for embedding input.
-    """
-    if not user_query or not user_query.strip():
-        return user_query
-
-    try:
-        llm_client = get_gemini_model_client()
-        prompt = f"""
-        You are a precise academic writing assistant.
-        Correct any spelling or grammatical errors in the following query while preserving
-        domain-specific and technical words (e.g., model names, algorithms, dataset names).
-
-        Then, rephrase it into a concise, clear, and semantically rich version suitable for
-        a research paper search engine that uses scientific text embeddings.
-
-        Return only the corrected and final query text — no explanations, no formatting.
-
-        Query: "{user_query}"
-        """
-        response = llm_client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt
-        )
-        corrected_query = response.text.strip() if hasattr(response, 'text') else user_query
-        if not corrected_query:
-            corrected_query = user_query
-        print(f"[Spell Check] Original: {user_query} --> Corrected: {corrected_query}")
-        return corrected_query
-
-    except Exception as e:
-        print(f"Spell correction error: {e}")
-        return user_query
-
-
-def preprocess_user_query(user_query: str, spell_check=True, clean_text=True, expand_query=False):
-    """
-    Complete preprocessing pipeline that sequentially:
-    1. Corrects spelling and grammar (LLM)
-    2. Cleans text (regex-based)
-    3. Optionally expands the query with LLM
-    """
-    final_query = user_query
-
-    if spell_check:
-        final_query = correct_query_with_llm(final_query)
-
-    if clean_text:
-        final_query = basic_clean(final_query)
-
-    if expand_query:
-        expanded = expand_query_with_llm(final_query)
-        print(f"[Query Expansion] Generated variations: {expanded}")
-        return expanded  # list of queries
-
-    return final_query  # single cleaned string
 
