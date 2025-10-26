@@ -2,7 +2,7 @@ import pandas as pd
 from pinecone import Pinecone, ServerlessSpec
 import re
 from sentence_transformers import SentenceTransformer
-from tqdm.auto import tqdm
+from tqdm import tqdm
 import time
 import os 
 from dotenv import load_dotenv 
