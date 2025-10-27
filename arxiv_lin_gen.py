@@ -1,10 +1,5 @@
 import re
 
-# pip install pandas pinecone sentence-transformers
-# https://info.arxiv.org/help/find/index.html
-# https://arxiv.org/abs/cs/9308101
-# https://arxiv.org/abs/2501.18084
-
 def get_arxiv_link(paper_id):
     """
     Generates a valid arXiv URL from various dataset ID formats, removing any version numbers.
@@ -83,4 +78,9 @@ if __name__ == '__main__':
     complex_link = get_arxiv_link(complex_old_id)
     print(f"Original ID: {complex_old_id}")
     print(f"Generated Link: {complex_link}\n")
+
+# References:
+# https://info.arxiv.org/help/find/index.html
+# https://arxiv.org/abs/cs/9308101
+# https://arxiv.org/abs/2501.18084
 

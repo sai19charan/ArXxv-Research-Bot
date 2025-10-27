@@ -8,3 +8,5 @@ sentence-transformers
 tqdm
 pinecone-client
 google-generative-ai
+nltk
+streamlit-keyup
