@@ -37,7 +37,7 @@ def get_arxiv_link(paper_id):
 
 
 # --- Pinecone Configuration ---
-PINECONE_API_KEY = "pcsk_7TqWpR_E2UN8sccXTbmTh9iUho7uXx48UQCDAytovexyo8owgEJhTJ5KvJKVrVrsaUPrRw" 
+PINECONE_API_KEY = "" 
 PINECONE_CLOUD = "aws" 
 PINECONE_REGION = "us-east-1"
 INDEX_NAME = 'arxiv-index'
